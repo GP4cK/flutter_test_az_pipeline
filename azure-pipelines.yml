@@ -60,4 +60,5 @@ jobs:
         inputs:
           gitHubConnection: "github.com_GP4cK"
           repositoryName: "$(Build.Repository.Name)"
-          comment: $(failingTests)
+          comment: |
+            $(failingTests)
