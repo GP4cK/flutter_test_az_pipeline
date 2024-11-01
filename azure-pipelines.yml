@@ -57,6 +57,6 @@ jobs:
       - task: GitHubComment@0
         condition: failed()
         inputs:
-          gitHubConnection: "Novade_GH_2024"
+          gitHubConnection: "github.com_GP4cK"
           repositoryName: "$(Build.Repository.Name)"
           comment: $(failingTests)
