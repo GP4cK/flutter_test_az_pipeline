@@ -27,7 +27,7 @@ jobs:
         displayName: Install Dependencies
         workingDirectory: $(System.DefaultWorkingDirectory)
       - script: |
-          jq_output=$(echo flutter test -r json | jq -s '
+          jq_output=$(flutter test -r json | jq -s '
           [
             .[]
             | select(.result != null and ([.result] | inside(["error", "failure"])))
