@@ -48,7 +48,7 @@ jobs:
           echo "##vso[task.setVariable variable=failingTests]$jq_output"
 
           # if failingTests is not empty, then the tests failed
-          if [ -n "$(failingTests)" ]; then
+          if [ -n "$jq_output" ]; then
             echo "##vso[task.logissue type=error]Tests failed"
             exit 1
           fi
