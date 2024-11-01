@@ -1,0 +1,65 @@
+# cspell:ignore prependpath 
+
+trigger: none
+
+variables:
+  - name: flutterVersion
+    value: "3.24.3"
+
+pr:
+  branches:
+    include:
+      - "*"
+
+pool:
+  vmImage: "ubuntu-latest"
+
+jobs:
+  - job: run_tests_on_ubuntu_job
+    displayName: Run tests on Ubuntu
+    steps:
+      - task: FlutterInstall@0
+        displayName: Install Flutter
+        inputs:
+          mode: "auto"
+          channel: "stable"
+          version: "custom"
+          customVersion: $(flutterVersion)
+      - script: flutter pub get
+        displayName: Install Dependencies
+        workingDirectory: $(System.DefaultWorkingDirectory)
+      - script: |
+          jq_output = $(echo flutter test -r json | jq -s '
+          [
+            .[]
+            | select(.result != null and ([.result] | inside(["error", "failure"])))
+            | .testID
+          ] as $testIDs
+          |
+          [
+            .[]
+            | select(.test.id != null and ([.test.id] | inside($testIDs)))
+            | .test.suiteID
+          ] as $suiteIDs
+          |
+            .[]
+            | select(.suite.id != null and ([.suite.id] | inside($suiteIDs)))
+            | .suite.path
+            | match("test/.*").string
+          ')
+          echo "##vso[task.setVariable variable=failingTests]$jq_output"
+
+          # if failingTests is not empty, then the tests failed
+          if [ -n "$(failingTests)" ]; then
+            echo "##vso[task.logissue type=error]Tests failed"
+            exit 1
+          fi
+        displayName: Run tests on Ubuntu
+        workingDirectory: $(System.DefaultWorkingDirectory)
+      - task: GitHubComment@0
+        condition: failed()
+        inputs:
+          gitHubConnection: 'Novade_GH_2024'
+          repositoryName: '$(Build.Repository.Name)'
+          comment: $(failingTests)
+      

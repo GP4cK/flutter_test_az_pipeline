@@ -21,4 +21,8 @@ void main() {
     await expectLater(
         find.byType(MaterialApp), matchesGoldenFile('golden/test.png'));
   });
+
+  test('failing test', () {
+    expect(1, 2);
+  });
 }
