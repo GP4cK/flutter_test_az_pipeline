@@ -27,7 +27,7 @@ jobs:
         displayName: Install Dependencies
         workingDirectory: $(System.DefaultWorkingDirectory)
       - script: |
-          jq_output=$(flutter test -r json | jq -s '
+          jq_output=$(flutter test -r json | jq -s -r '
           [
             .[]
             | select(.result != null and ([.result] | inside(["error", "failure"])))
@@ -50,6 +50,7 @@ jobs:
           # if failingTests is not empty, then the tests failed
           if [ -n "$jq_output" ]; then
             echo "##vso[task.logissue type=error]Tests failed"
+            echo $jq_output
             exit 1
           fi
         displayName: Run tests on Ubuntu
