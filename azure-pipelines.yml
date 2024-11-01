@@ -1,19 +1,62 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+trigger: none
 
-trigger:
-- main
+variables:
+  - name: flutterVersion
+    value: "3.24.3"
+
+pr:
+  branches:
+    include:
+      - "*"
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: "ubuntu-latest"
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+jobs:
+  - job: run_tests_on_ubuntu_job
+    displayName: Run tests on Ubuntu
+    steps:
+      - task: FlutterInstall@0
+        displayName: Install Flutter
+        inputs:
+          mode: "auto"
+          channel: "stable"
+          version: "custom"
+          customVersion: $(flutterVersion)
+      - script: flutter pub get
+        displayName: Install Dependencies
+        workingDirectory: $(System.DefaultWorkingDirectory)
+      - script: |
+          jq_output = $(echo flutter test -r json | jq -s '
+          [
+            .[]
+            | select(.result != null and ([.result] | inside(["error", "failure"])))
+            | .testID
+          ] as $testIDs
+          |
+          [
+            .[]
+            | select(.test.id != null and ([.test.id] | inside($testIDs)))
+            | .test.suiteID
+          ] as $suiteIDs
+          |
+            .[]
+            | select(.suite.id != null and ([.suite.id] | inside($suiteIDs)))
+            | .suite.path
+            | match("test/.*").string
+          ')
+          echo "##vso[task.setVariable variable=failingTests]$jq_output"
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+          # if failingTests is not empty, then the tests failed
+          if [ -n "$(failingTests)" ]; then
+            echo "##vso[task.logissue type=error]Tests failed"
+            exit 1
+          fi
+        displayName: Run tests on Ubuntu
+        workingDirectory: $(System.DefaultWorkingDirectory)
+      - task: GitHubComment@0
+        condition: failed()
+        inputs:
+          gitHubConnection: "Novade_GH_2024"
+          repositoryName: "$(Build.Repository.Name)"
+          comment: $(failingTests)
