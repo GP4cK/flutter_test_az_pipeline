@@ -45,7 +45,13 @@ jobs:
             | .suite.path
             | match("test/.*").string
           ')
-          echo "##vso[task.setVariable variable=failingTests]$jq_output"
+
+          escape_data() {
+            local data=$1
+            data="${data//$'\n'/'%0A'}"
+            echo "$data"
+          }
+          echo "##vso[task.setVariable variable=failingTests]$(escape_data  "$jq_output")"
 
           # if failingTests is not empty, then the tests failed
           if [ -n "$jq_output" ]; then
