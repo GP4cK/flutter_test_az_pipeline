@@ -27,7 +27,7 @@ jobs:
         displayName: Install Dependencies
         workingDirectory: $(System.DefaultWorkingDirectory)
       - script: |
-          jq_output = $(echo flutter test -r json | jq -s '
+          jq_output=$(flutter test -r json | jq -s -r '
           [
             .[]
             | select(.result != null and ([.result] | inside(["error", "failure"])))
@@ -45,11 +45,18 @@ jobs:
             | .suite.path
             | match("test/.*").string
           ')
-          echo "##vso[task.setVariable variable=failingTests]$jq_output"
+
+          escape_data() {
+            local data=$1
+            data="${data//$'\n'/'%0A'}"
+            echo "$data"
+          }
+          echo "##vso[task.setVariable variable=failingTests]$(escape_data  "$jq_output")"
 
           # if failingTests is not empty, then the tests failed
-          if [ -n "$(failingTests)" ]; then
+          if [ -n "$jq_output" ]; then
             echo "##vso[task.logissue type=error]Tests failed"
+            echo -e "$jq_output"
             exit 1
           fi
         displayName: Run tests on Ubuntu
@@ -57,6 +64,7 @@ jobs:
       - task: GitHubComment@0
         condition: failed()
         inputs:
-          gitHubConnection: "Novade_GH_2024"
+          gitHubConnection: "github.com_GP4cK"
           repositoryName: "$(Build.Repository.Name)"
-          comment: $(failingTests)
+          comment: |
+            $(failingTests)
