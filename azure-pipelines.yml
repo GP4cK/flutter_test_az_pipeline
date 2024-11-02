@@ -56,7 +56,7 @@ jobs:
           # if failingTests is not empty, then the tests failed
           if [ -n "$jq_output" ]; then
             echo "##vso[task.logissue type=error]Tests failed"
-            echo $jq_output
+            echo -e "$jq_output"
             exit 1
           fi
         displayName: Run tests on Ubuntu
